@@ -1,67 +1,91 @@
-name: Update READMEs on YAML Change
+name: Generate README on Tags Change
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
+    branches:
+      - main
+    paths:
+      - tags.yaml
+  workflow_dispatch: # Allows manual triggering
     inputs:
-      branch:
-        description: 'Branch to run on'
-        required: true
-        default: 'main'
+      check_all_prs:
+        description: 'Check all open pull requests?'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
-  update_readme:
+  generate_readme:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR Branch
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
-      - name: Setup Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '>=1.18.0' # Adjust as needed
+          go-version: 'stable'
 
-      - name: Check for YAML Changes
-        id: check_yaml
-        run: |
-          changed_files=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.TAGS_YAML_UPDATE_GHA }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" | jq -r '.[].filename')
-          if [[ "$changed_files" == *'your_yaml_file.yaml'* ]]; then
-            echo "yaml_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "yaml_changed=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: tags.yaml
 
-      - name: Run Go Code
-        if: steps.check_yaml.outputs.yaml_changed == 'true'
+      - name: Run generator if tags.yaml changed
+        if: steps.changed-files.outputs.any_changed == 'true' || github.event.inputs.check_all_prs == true
         run: |
           cd generator
-          go run readme_app.go
+          go mod tidy
+          go run readme_app.go ../tags.yaml
 
-      - name: Commit and Push Changes
-        if: steps.check_yaml.outputs.yaml_changed == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
-          branch: ${{ github.event.pull_request.head.ref }}
-          force: true
-
-      - name: Setup GitHub CLI
-        if: steps.check_yaml.outputs.yaml_changed == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await exec.exec('sudo apt-get update')
-            await exec.exec('sudo apt-get install -y gh')
-          retries: 2
-
-      - name: Add Comment to PR
-        if: steps.check_yaml.outputs.yaml_changed == 'true'
+      - name: Configure Git user
+        if: steps.changed-files.outputs.any_changed == 'true' || github.event.inputs.check_all_prs == true
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "Automated README updates have been pushed to this PR based on the changes to your_yaml_file.yaml."
-        env:
-          GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+
+      - name: Commit and push changes
+        if: steps.changed-files.outputs.any_changed == 'true' || github.event.inputs.check_all_prs == true
+        run: |
+          git add *.md
+          git commit -m "Update READMEs based on tags.yaml changes"
+          git push origin ${{ github.head_ref }}
+
+      - name: Check all other PRs
+        if: github.event.inputs.check_all_prs == true
+        uses: peter-evans/find-pull-requests@v3
+        id: find-prs
+        with:
+          state: open
+
+      - name: Loop through other PRs
+        if: github.event.inputs.check_all_prs == true && steps.find-prs.outputs.pull-requests != '[]'
+        run: |
+          for pr in $(echo '${{ steps.find-prs.outputs.pull-requests }}' | jq -r '.[].number'); do
+            echo "Checking PR #$pr"
+            git checkout origin/main
+            git pull
+            git checkout origin/$pr
+            git pull
+            if [[ -f tags.yaml ]]; then
+              echo "tags.yaml found in PR #$pr"
+              cd generator
+              go mod tidy
+              go run readme_app.go ../tags.yaml
+              git add *.md
+              if [[ $(git status --porcelain) ]]; then
+                git config --local user.email "actions@github.com"
+                git config --local user.name "GitHub Actions"
+                git commit -m "Update READMEs based on tags.yaml changes"
+                git push origin $pr
+              else
+                echo "No changes to commit in PR #$pr"
+              fi
+            else
+              echo "tags.yaml not found in PR #$pr"
+            fi
+          done
