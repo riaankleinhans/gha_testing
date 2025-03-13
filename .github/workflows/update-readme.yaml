@@ -67,9 +67,10 @@ jobs:
         run: |
           for pr in $(echo '${{ steps.find-prs.outputs.pull-requests }}' | jq -r '.[].number'); do
             echo "Checking PR #$pr"
+            branch_name=$(gh api /repos/${{ github.repository }}/pulls/$pr | jq -r '.head.ref')
             git checkout origin/main
             git pull
-            git checkout origin/$pr
+            git checkout "origin/$branch_name"
             git pull
             if [[ -f tags.yaml ]]; then
               echo "tags.yaml found in PR #$pr"
@@ -81,7 +82,7 @@ jobs:
                 git config --local user.email "actions@github.com"
                 git config --local user.name "GitHub Actions"
                 git commit -m "Update READMEs based on tags.yaml changes"
-                git push origin $pr
+                git push origin $branch_name
               else
                 echo "No changes to commit in PR #$pr"
               fi
@@ -89,3 +90,5 @@ jobs:
               echo "tags.yaml not found in PR #$pr"
             fi
           done
+        env:
+          GH_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
