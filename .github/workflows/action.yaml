@@ -1,10 +1,22 @@
-name: Update README on tags.yaml Change
+name: Generate README on Tags Change
 
 on:
   pull_request:
+    branches:
+      - main
     paths:
-      - 'tags.yaml'
+      - tags.yaml
   workflow_dispatch:
+    inputs:
+      check_all_prs:
+        description: 'Check all open pull requests?'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
   update-readme:
