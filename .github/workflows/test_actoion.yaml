@@ -23,7 +23,7 @@ jobs:
 
       - name: Run readme_app.go
         run: |
-          go run root/generator/readme_app.go
+          go run generator/readme_app.go
 
       - name: Commit and push changes
         env:
