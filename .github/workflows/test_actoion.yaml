@@ -1,17 +1,36 @@
-name: Test Different Action
+name: Update README on tags.yaml Change
 
 on:
+  pull_request:
+    paths:
+      - 'tags.yaml'
   workflow_dispatch:
 
-permissions:
-  pull-requests: read
-
 jobs:
-  test:
+  update-readme:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Test Action
-        uses: actions/github-script@v7
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
         with:
-          script: |
-            console.log("Hello from GitHub Script!");
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+
+      - name: Run readme_app.go
+        run: |
+          go run root/generator/readme_app.go
+
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add .
+          git commit -m "Update README based on tags.yaml changes" || echo "No changes to commit"
+          git push origin ${{ github.event.pull_request.head.ref }}
