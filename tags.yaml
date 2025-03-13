@@ -7,10 +7,10 @@ tags:
     label: tag-operational-resilience
     leadership:
       chairs:
-        - github: riaankleinhans
-          name: Riaan Kleinhans
-          company: The Linux Foundation
-          email: rkleinhans@contractor.linuxfoundation.org
+        - github: johndoe
+          name: John Doe
+          company: Out and About
+          email: jdoe@outandabout.org
       tech_leads:
         - github: riaankleinhans
           name: Riaan Kleinhans
