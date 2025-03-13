@@ -1,0 +1,20 @@
+name: Test Find Pull Requests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Action
+        uses: peter-evans/find-pull-requests@<COMMIT_SHA> # Replace with actual SHA
+        id: find-prs
+        with:
+          state: open
+
+      - name: Print Results
+        run: echo "${{ steps.find-prs.outputs.pull-requests }}"
