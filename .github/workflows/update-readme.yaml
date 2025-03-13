@@ -20,8 +20,10 @@ permissions:
 jobs:
   generate_readme:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Clear Runner Cache
+        run: |
+          rm -rf $HOME/.cache/act
       - name: Checkout code
         uses: actions/checkout@v4
         with:
