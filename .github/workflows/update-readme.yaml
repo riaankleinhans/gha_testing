@@ -28,7 +28,7 @@ jobs:
       - name: Check for YAML Changes
         id: check_yaml
         run: |
-          changed_files=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.tags_yaml_update_gha }}" \
+          changed_files=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.TAGS_YAML_UPDATE_GHA }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" | jq -r '.[].filename')
           if [[ "$changed_files" == *'your_yaml_file.yaml'* ]]; then
             echo "yaml_changed=true" >> $GITHUB_OUTPUT
@@ -46,7 +46,7 @@ jobs:
         if: steps.check_yaml.outputs.yaml_changed == 'true'
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
           branch: ${{ github.event.pull_request.head.ref }}
           force: true
 
@@ -64,4 +64,4 @@ jobs:
         run: |
           gh pr comment ${{ github.event.pull_request.number }} --body "Automated README updates have been pushed to this PR based on the changes to your_yaml_file.yaml."
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
