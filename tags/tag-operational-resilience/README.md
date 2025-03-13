@@ -1,7 +1,7 @@
 # TAG Operational Resilience
 
 ## Mission Statement
-Observability, Management, Business Continuity, Resource Optimization, Cost Efficiency, Energy, Performance, Troubleshooting, Reliability, Day 2 Ops
+Observability, Management, Business Continuity, Resource Optimization, Cost Efficiency, Energy, Performance, Troubleshooting, Reliability, Day 2 Ops etc, etc
 
 
 [Charter](./charter.md)
