@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - tags.yaml
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
     inputs:
       check_all_prs:
         description: 'Check all open pull requests?'
