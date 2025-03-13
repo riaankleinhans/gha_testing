@@ -2,7 +2,7 @@ tags:
   - dir: tag-operational-resilience
     name: TAG Operational Resilience
     mission_statement: >
-      Observability, Management, Business Continuity, Resource Optimization, Cost Efficiency, Energy, Performance, Troubleshooting, Reliability, Day 2 Ops
+      Observability, Management, Business Continuity, Resource Optimization, Cost Efficiency, Energy, Performance, Troubleshooting, Reliability, Day 2 Ops etc, etc
     charter_link: charter.md
     label: tag-operational-resilience
     leadership:
