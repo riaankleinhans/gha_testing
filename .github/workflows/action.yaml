@@ -22,8 +22,9 @@ jobs:
           go-version: 'stable'
 
       - name: Run readme_app.go
+        working-directory: generator
         run: |
-          go run generator/readme_app.go
+          go run readme_app.go
 
       - name: Commit and push changes
         env:
