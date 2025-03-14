@@ -60,16 +60,16 @@ jobs:
           # Define branch name for the update in the base repo
           BRANCH_NAME=readme-update-fork-${{ github.event.pull_request.number }}
           
-          # Change remote origin to point to the base repository
+          # Reset remote origin to point to the base repository
           git remote set-url origin https://github.com/${{ github.repository }}.git
           
-          # Create a new branch for the update
-          git checkout -b $BRANCH_NAME
+          # Create (or force update) a new branch for the update
+          git checkout -B $BRANCH_NAME
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add .
           git commit -m "Update README based on tags.yaml changes" || { echo 'No changes to commit'; exit 0; }
-          git push origin $BRANCH_NAME
+          git push origin $BRANCH_NAME --force
           
           # Create a new PR via the GitHub API in the base repository
           PR_TITLE="Update README based on tags.yaml changes from fork PR #${{ github.event.pull_request.number }}"
@@ -77,7 +77,13 @@ jobs:
           API_URL=https://api.github.com/repos/${{ github.repository }}/pulls
           PR_DATA=$(jq -n --arg title "$PR_TITLE" --arg head "$BRANCH_NAME" --arg base "${{ github.event.pull_request.base.ref }}" --arg body "$PR_BODY" '{title: $title, head: $head, base: $base, body: $body}')
           RESPONSE=$(curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$PR_DATA" $API_URL)
+          echo "PR creation response: $RESPONSE"
           NEW_PR_NUMBER=$(echo "$RESPONSE" | jq -r '.number')
+          
+          if [ "$NEW_PR_NUMBER" = "null" ]; then
+            echo "Error: PR not created. API response: $RESPONSE"
+            exit 1
+          fi
           
           # Comment on the original fork PR with a link to the new PR in the base repository
           COMMENT="README updated in [PR #$NEW_PR_NUMBER](https://github.com/${{ github.repository }}/pull/$NEW_PR_NUMBER)."
