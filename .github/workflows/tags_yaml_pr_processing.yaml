@@ -54,7 +54,8 @@ jobs:
       - name: Create new PR and comment (forked PR)
         if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use your PAT instead of GITHUB_TOKEN for PR creation
+          GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
         run: |
           set -e
           # Define branch name for the update in the base repo
