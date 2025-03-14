@@ -8,7 +8,7 @@ Observability, Management, Business Continuity, Resource Optimization, Cost Effi
 
 ## Leadership
 ### Chairs
-- John Doe (**[@johndoe](https://github.com/johndoe)**), Out and About
+- John Doe (**[@bernodoe](https://github.com/bernodoe)**), Out and About
 
 ## Meetings
 - **TAG Operational Resilience Meeting**: [Calendar](https://zoom-lfx.platform.linuxfoundation.org/meetings/cncf?view=week) | [Recordings](https://www.youtube.com/playlist?foo)
