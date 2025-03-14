@@ -9,7 +9,7 @@ tags:
       chairs:
         - github: johndoe
           name: John Doe
-          company: Out and About
+          company: Out and Abouts
           email: jdoe@outandabout.org
       tech_leads:
         - github: riaankleinhans
