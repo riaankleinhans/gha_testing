@@ -37,36 +37,11 @@ jobs:
           go-version: 'stable'
 
       # ===== Internal PR Branch Steps (from base repository) =====
-      - name: Configure Git for internal PR
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-
-      - name: Merge main branch (internal PR)
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        run: |
-          git fetch origin main
-          git merge origin/main --no-edit || (echo "Merge conflict or already up-to-date"; git merge --abort; exit 0)
-
       - name: Run readme_app.go (internal PR)
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         working-directory: generator
         run: |
           go run readme_app.go
-
-      - name: Commit and push changes (internal PR)
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git add .
-          if ! git diff --staged --quiet; then
-            git commit -m "Update README based on tags.yaml changes"
-            git push origin ${{ github.event.pull_request.head.ref }}
-          else
-            echo "No changes to commit"
-          fi
 
       # ===== Forked PR Branch Steps =====
       - name: Create new PR, comment and close original (forked PR)
