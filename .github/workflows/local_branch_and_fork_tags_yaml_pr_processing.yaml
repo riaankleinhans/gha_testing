@@ -1,4 +1,3 @@
-
 name: Generate README on Tags Change
 
 on:
@@ -28,33 +27,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}  # Use ref instead of SHA for branch tracking
+          ref: ${{ github.event.pull_request.head.ref }}  # Ensure branch tracking
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}  # Ensure token is passed for push access
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: 'stable'
 
-      # ===== Internal PR Branch Steps (from base repository) =====
+      # ===== Internal PR Handling (from base repository) =====
       - name: Configure Git for internal PR
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-      - name: Merge main branch (internal PR)
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        run: |
-          git fetch origin main
-          git merge origin/main --no-edit || (echo "Merge conflict or already up-to-date"; git merge --abort; exit 0)
-
       - name: Run readme_app.go (internal PR)
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        working-directory: generator
         run: |
-          go run readme_app.go
+          go run generator/readme_app.go
 
       - name: Commit and push changes (internal PR)
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
@@ -69,7 +61,7 @@ jobs:
             echo "No changes to commit"
           fi
 
-      # ===== Forked PR Branch Steps =====
+      # ===== Forked PR Handling =====
       - name: Create new PR, comment and close original (forked PR)
         if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         env:
@@ -82,9 +74,7 @@ jobs:
           git fetch origin main
           git checkout -B $BRANCH_NAME origin/main
           cp /tmp/tags.yaml tags.yaml
-          cd generator
-          go run readme_app.go
-          cd ..
+          go run generator/readme_app.go
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add .
@@ -103,15 +93,13 @@ jobs:
               exit 1
             fi
             ORIGINAL_COMMENT="This PR has been superseded by [PR #$NEW_PR_NUMBER](https://github.com/${{ github.repository }}/pull/$NEW_PR_NUMBER). Closing this PR."
-            ORIGINAL_COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
-            ORIGINAL_COMMENT_DATA=$(jq -n --arg body "$ORIGINAL_COMMENT" '{body: $body}')
-            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$ORIGINAL_COMMENT_DATA" $ORIGINAL_COMMENT_API_URL
-            CLOSE_API_URL=https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}
-            curl -s -X PATCH -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d '{ "state": "closed" }' $CLOSE_API_URL
+            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{ \"body\": \"$ORIGINAL_COMMENT\" }" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+            curl -s -X PATCH -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d '{ "state": "closed" }' \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}"
             NEW_PR_COMMENT="This PR replaces fork PR [#${{ github.event.pull_request.number }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})."
-            NEW_PR_COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/$NEW_PR_NUMBER/comments
-            NEW_PR_COMMENT_DATA=$(jq -n --arg body "$NEW_PR_COMMENT" '{body: $body}')
-            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$NEW_PR_COMMENT_DATA" $NEW_PR_COMMENT_API_URL
+            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{ \"body\": \"$NEW_PR_COMMENT\" }" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/$NEW_PR_NUMBER/comments"
           else
             echo "No changes to commit"
           fi
