@@ -35,11 +35,11 @@ jobs:
         with:
           go-version: 'stable'
 
-      # === For internal PRs: Ensure we are on a local branch, then merge main
+      # ===== Internal PR Branch Steps (from base repository) =====
       - name: Ensure branch checkout (internal PR)
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
-          # Force create (or update) a local branch matching the PR branch name.
+          # Ensure we are on the PR branch (this converts detached HEAD to a local branch)
           git checkout -B ${{ github.event.pull_request.head.ref }}
 
       - name: Merge main branch (internal PR)
@@ -62,14 +62,15 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add .
-          # Only commit if there are differences compared to the merged branch
+          # Commit only if there are differences
           git diff --quiet || git commit -m "Update README based on tags.yaml changes"
           git push origin ${{ github.event.pull_request.head.ref }}
 
-      # === For forked PRs: Use PAT to create new branch and PR against main in the base repository
+      # ===== Forked PR Branch Steps =====
       - name: Create new PR, comment and close original (forked PR)
         if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         env:
+          # Use your PAT for PR creation and modifications
           GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
         run: |
           set -e
