@@ -35,7 +35,15 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Run readme_app.go
+      # === Internal PR Branch (from base repo) ===
+      - name: Merge main branch (internal PR)
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          git fetch origin main
+          git merge origin/main --no-edit || echo "Already up-to-date"
+
+      - name: Run readme_app.go (internal PR)
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         working-directory: generator
         run: |
           go run readme_app.go
@@ -48,28 +56,43 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add .
-          git commit -m "Update README based on tags.yaml changes" || echo "No changes to commit"
+          # Only commit if there are differences (now relative to main)
+          git diff --quiet || git commit -m "Update README based on tags.yaml changes"
           git push origin ${{ github.event.pull_request.head.ref }}
 
+      # === Forked PR Branch ===
       - name: Create new PR, comment and close original (forked PR)
         if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         env:
-          # Use your PAT for PR creation and modification
+          # Use your PAT for PR creation and modifications
           GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
         run: |
           set -e
+          # Save the fork's updated tags.yaml
+          cp tags.yaml /tmp/tags.yaml
+          
           # Define branch name for the update in the base repo
           BRANCH_NAME=readme-update-fork-${{ github.event.pull_request.number }}
           
-          # Reset remote origin to point to the base repository
+          # Reset remote origin to point to the base repository and fetch main
           git remote set-url origin https://github.com/${{ github.repository }}.git
+          git fetch origin main
+          # Create a new branch from main
+          git checkout -B $BRANCH_NAME origin/main
           
-          # Create (or force update) a new branch for the update
-          git checkout -B $BRANCH_NAME
+          # Replace tags.yaml with the fork's version
+          cp /tmp/tags.yaml tags.yaml
+          
+          # Run the generator so that the README is built relative to main
+          cd generator
+          go run readme_app.go
+          cd ..
+          
+          # Commit the changes
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add .
-          git commit -m "Update README based on tags.yaml changes" || { echo 'No changes to commit'; exit 0; }
+          git diff --quiet || git commit -m "Update README based on tags.yaml changes"
           git push origin $BRANCH_NAME --force
           
           # Create a new PR via the GitHub API in the base repository
@@ -86,7 +109,7 @@ jobs:
             exit 1
           fi
           
-          # Comment on the original fork PR indicating it is being superseded and then close it
+          # Comment on the original fork PR to indicate it is superseded, then close it
           ORIGINAL_COMMENT="This PR has been superseded by [PR #$NEW_PR_NUMBER](https://github.com/${{ github.repository }}/pull/$NEW_PR_NUMBER). Closing this PR."
           ORIGINAL_COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
           ORIGINAL_COMMENT_DATA=$(jq -n --arg body "$ORIGINAL_COMMENT" '{body: $body}')
