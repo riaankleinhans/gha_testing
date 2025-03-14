@@ -7,8 +7,8 @@ tags:
     label: tag-operational-resilience
     leadership:
       chairs:
-        - github: johndoe
-          name: John Doe
+        - github: janedoe
+          name: Jane Doe
           company: Out and About
           email: jdoe@outandabout.org
       tech_leads:
