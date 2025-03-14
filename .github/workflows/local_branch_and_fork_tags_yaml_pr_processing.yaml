@@ -43,6 +43,12 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
+      - name: Merge main branch (internal PR)
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          git fetch origin main
+          git merge origin/main --no-edit || (echo "Merge conflict or already up-to-date"; git merge --abort; exit 0)
+
       - name: Run readme_app.go (internal PR)
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         working-directory: generator
