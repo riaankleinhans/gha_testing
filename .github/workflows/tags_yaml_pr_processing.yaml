@@ -51,10 +51,10 @@ jobs:
           git commit -m "Update README based on tags.yaml changes" || echo "No changes to commit"
           git push origin ${{ github.event.pull_request.head.ref }}
 
-      - name: Create new PR and comment (forked PR)
+      - name: Create new PR, comment and close original (forked PR)
         if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         env:
-          # Use your PAT instead of GITHUB_TOKEN for PR creation
+          # Use your PAT for PR creation and modification
           GITHUB_TOKEN: ${{ secrets.TAGS_YAML_UPDATE_GHA }}
         run: |
           set -e
@@ -86,8 +86,17 @@ jobs:
             exit 1
           fi
           
-          # Comment on the original fork PR with a link to the new PR in the base repository
-          COMMENT="README updated in [PR #$NEW_PR_NUMBER](https://github.com/${{ github.repository }}/pull/$NEW_PR_NUMBER)."
-          COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
-          COMMENT_DATA=$(jq -n --arg body "$COMMENT" '{body: $body}')
-          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$COMMENT_DATA" $COMMENT_API_URL
+          # Comment on the original fork PR indicating it is being superseded and then close it
+          ORIGINAL_COMMENT="This PR has been superseded by [PR #$NEW_PR_NUMBER](https://github.com/${{ github.repository }}/pull/$NEW_PR_NUMBER). Closing this PR."
+          ORIGINAL_COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+          ORIGINAL_COMMENT_DATA=$(jq -n --arg body "$ORIGINAL_COMMENT" '{body: $body}')
+          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$ORIGINAL_COMMENT_DATA" $ORIGINAL_COMMENT_API_URL
+          
+          CLOSE_API_URL=https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}
+          curl -s -X PATCH -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d '{ "state": "closed" }' $CLOSE_API_URL
+          
+          # Comment on the new PR indicating that it replaces the original fork PR
+          NEW_PR_COMMENT="This PR replaces fork PR [#${{ github.event.pull_request.number }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})."
+          NEW_PR_COMMENT_API_URL=https://api.github.com/repos/${{ github.repository }}/issues/$NEW_PR_NUMBER/comments
+          NEW_PR_COMMENT_DATA=$(jq -n --arg body "$NEW_PR_COMMENT" '{body: $body}')
+          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$NEW_PR_COMMENT_DATA" $NEW_PR_COMMENT_API_URL
